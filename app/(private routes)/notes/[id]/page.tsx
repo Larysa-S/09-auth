@@ -1,19 +1,26 @@
 import React from 'react';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { fetchNoteById } from '@/lib/api';
+import { fetchNoteById } from '@/lib/api/serverApi';
 import NoteDetailsClient from './NoteDetails.client';
 
 interface NotePageProps {
   params: Promise<{ id: string }>;
 }
 
-// 🚀 1. Динамічне опрацювання SEO через generateMetadata (Вимога ментора)
 export async function generateMetadata({ params }: NotePageProps): Promise<Metadata> {
   const { id } = await params;
 
   try {
     const note = await fetchNoteById(id);
+
+    // 🚀 ВИПРАВЛЕНО ДЛЯ TYPESCRIPT: якщо функція повернула null, переходимо в дефолтні метадані
+    if (!note) {
+      return {
+        title: 'Note Not Found',
+        description: 'The requested note could not be found or has been deleted.',
+      };
+    }
 
     return {
       title: note.title, // Автоматично підставиться в шаблон: "Назва нотатки | NoteHub"
@@ -21,7 +28,7 @@ export async function generateMetadata({ params }: NotePageProps): Promise<Metad
       openGraph: {
         title: `${note.title} | NoteHub`,
         description: note.content.substring(0, 160) || 'Detailed view of the note.',
-        url: `https://08-zustand-wbtm-pqo1qoes5-larysa-s-projects-0c81aa0e.vercel.app/notes/${id}`,
+        url: `${process.env.NEXT_PUBLIC_API_URL}/notes/${id}`,
         type: 'article',
         images: [
           {
@@ -30,7 +37,7 @@ export async function generateMetadata({ params }: NotePageProps): Promise<Metad
         ],
       },
     };
-  } catch (error) {
+  } catch {
     return {
       title: 'Note Not Found',
       description: 'The requested note could not be found or has been deleted.',
@@ -45,8 +52,13 @@ export default async function NotePage({ params }: NotePageProps) {
 
   try {
     initialData = await fetchNoteById(id);
-  } catch (error) {
-    console.error('Failed to fetch note for SSR:', error);
+
+    // 🚀 ВИПРАВЛЕНО ДЛЯ TYPESCRIPT ТА БЕЗПЕКИ: якщо нотатки немає на бекенді (null) —
+    // викликаємо вбудовану функцію notFound() для відображення 404 сторінки
+    if (!initialData) {
+      notFound();
+    }
+  } catch {
     notFound();
   }
 

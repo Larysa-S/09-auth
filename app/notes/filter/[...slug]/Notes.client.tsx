@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useDebouncedCallback } from 'use-debounce';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link'; // 🚀 ДОДАНО: Імпортуємо Link для переходу
-import { fetchNotes } from '@/lib/api';
+import { fetchNotes } from '@/lib/api/clientApi';
 
 import NoteList from '@/components/NoteList/NoteList';
 import SearchBox from '@/components/SearchBox/SearchBox';

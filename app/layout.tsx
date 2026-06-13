@@ -4,7 +4,9 @@ import '@/app/globals.css';
 import TanStackProvider from '@/components/TanStackProvider/TanStackProvider';
 import Header from '@/components/Header/Header';
 import Footer from '@/components/Footer/Footer';
+import AuthProvider from '@/components/AuthProvider/AuthProvider';
 
+// 🚀 1. НАЛАШТУВАННЯ ШРИФТУ
 const roboto = Roboto({
   weight: ['400', '500', '700'],
   subsets: ['latin', 'cyrillic'],
@@ -12,7 +14,7 @@ const roboto = Roboto({
   variable: '--font-roboto',
 });
 
-// 🚀 ПОВНЕ ВИПРАВЛЕННЯ ЗАУВАЖЕННЯ МЕНТОРА
+// 🚀 2. ВАЛІДНІ МЕТАДАНІ ЗА ЗАУВАЖЕННЯМ МЕНТОРА (Залишено один правильний варіант)
 export const metadata: Metadata = {
   title: {
     template: '%s | NoteHub',
@@ -26,7 +28,6 @@ export const metadata: Metadata = {
       'Зберігайте свої думки та керуйте нотатками за допомогою сучасного стеку технологій.',
     type: 'website',
     siteName: 'NoteHub',
-    // 🔥 додано канонічний url застосунку
     url: 'https://08-zustand-larysa-s-projects-0c81aa0e.vercel.app',
     images: [
       {
@@ -44,16 +45,25 @@ interface RootLayoutProps {
   modal?: React.ReactNode;
 }
 
+// 🚀 3. ЄДИНИЙ КОРЕНЕВИЙ ЛЕЙАУТ ІЗ ПРАВИЛЬНОЮ ІЄРАРХІЄЮ ПРОВАЙДЕРІВ
 export default function RootLayout({ children, modal }: RootLayoutProps) {
   return (
     <html lang="en">
       <body className={`${roboto.className} ${roboto.variable}`}>
+        {/* 🥇 1. На самому верху TanStackProvider */}
         <TanStackProvider>
-          <Header />
-          {children}
-          {modal}
-          <Footer />
+          {/* 🥈 2. Всередині AuthProvider обгортає весь контент за ТЗ */}
+          <AuthProvider>
+            <Header />
+
+            {children}
+            {modal}
+
+            <Footer />
+          </AuthProvider>
         </TanStackProvider>
+
+        {/* Портал для модальних вікон */}
         <div id="modal-root"></div>
       </body>
     </html>

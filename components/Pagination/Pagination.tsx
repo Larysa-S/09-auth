@@ -1,7 +1,6 @@
-'use client'; // Обов'язково вказуємо, що це клієнтський компонент
+'use client';
 
-import ReactPaginate from 'react-paginate';
-import css from './Pagination.module.css';
+import css from './Pagination.module.css'; // переконайтеся, що у вас є цей файл стилів
 
 interface PaginationProps {
   currentPage: number;
@@ -10,29 +9,30 @@ interface PaginationProps {
 }
 
 export default function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
-  // Захист від невалідних даних (NaN, undefined, 0, null):
-  if (!totalPages || Number.isNaN(totalPages) || totalPages <= 1) {
-    return null;
-  }
-
-  const handlePageClick = (selectedItem: { selected: number }): void => {
-    onPageChange(selectedItem.selected + 1);
-  };
+  // Якщо сторінка лише одна, пагінацію можна не показувати
+  if (totalPages <= 1) return null;
 
   return (
-    <ReactPaginate
-      forcePage={currentPage - 1}
-      pageCount={totalPages}
-      onPageChange={handlePageClick}
-      previousLabel="←"
-      nextLabel="→"
-      breakLabel="..."
-      containerClassName={css.pagination}
-      activeClassName={css.active}
-      pageClassName={css.pageItem}
-      previousClassName={css.prevItem}
-      nextClassName={css.nextItem}
-      disabledClassName={css.disabled}
-    />
+    <div className={css.paginationContainer}>
+      <button
+        className={css.pageButton}
+        disabled={currentPage === 1}
+        onClick={() => onPageChange(currentPage - 1)}
+      >
+        Previous
+      </button>
+
+      <span className={css.pageInfo}>
+        Page {currentPage} of {totalPages}
+      </span>
+
+      <button
+        className={css.pageButton}
+        disabled={currentPage === totalPages}
+        onClick={() => onPageChange(currentPage + 1)}
+      >
+        Next
+      </button>
+    </div>
   );
 }

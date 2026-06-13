@@ -1,6 +1,6 @@
 import React from 'react';
 import { QueryClient, HydrationBoundary, dehydrate } from '@tanstack/react-query';
-import { fetchNoteById } from '@/lib/api';
+import { fetchNoteById } from '@/lib/api/serverApi';
 import NotePreviewClient from './NotePreview.client';
 
 // 1. Обов'язкова типізація асинхронних params для Next.js 16 за вимогою ментора

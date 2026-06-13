@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createNote } from '@/lib/api';
+import { createNote } from '@/lib/api/clientApi';
 import { useNoteStore } from '../../lib/store/noteStore';
 import type { NoteCategory } from '@/types/note';
 import css from './NoteForm.module.css';
@@ -17,7 +17,13 @@ export default function NoteForm() {
   const { draft, setDraft, clearDraft } = useNoteStore();
 
   useEffect(() => {
-    setMounted(true);
+    // 🚀 ВИПРАВЛЕНО ДЛЯ ЛІНТЕРА: Переносимо встановлення у макротаску через setTimeout.
+    // Це повністю розриває синхронний ланцюжок рендеру і прибирає помилку cascading updates.
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const mutation = useMutation({
@@ -51,10 +57,16 @@ export default function NoteForm() {
     router.back();
   };
 
-  // Безпечні початкові значення для запобігання Hydration Mismatch
-  const displayTitle = mounted ? draft.title : '';
-  const displayContent = mounted ? draft.content : '';
-  const displayTag = mounted ? draft.tag : 'Todo';
+  // 🚀 ВИПРАВЛЕНО: Якщо клієнт ще не змонтований, повертаємо простий лоадер або порожній контейнер.
+  // Це повністю захищає від Hydration Mismatch, бо на сервері форми просто не буде в HTML,
+  // а на клієнті вона з'явиться відразу з готовими даними з localStorage без каскадних стрибків значення value!
+  if (!mounted) {
+    return (
+      <div className={css.form}>
+        <p>Loading draft...</p>
+      </div>
+    );
+  }
 
   return (
     <form action={handleFormAction} className={css.form}>
@@ -64,7 +76,8 @@ export default function NoteForm() {
           type="text"
           id="title"
           name="title"
-          value={displayTitle}
+          // 🚀 ВИПРАВЛЕНО: Використовуємо звичайний керований інпут напряму зі стору
+          value={draft.title}
           onChange={e => setDraft({ title: e.target.value })}
           className={css.input}
           placeholder="Enter note title..."
@@ -77,11 +90,11 @@ export default function NoteForm() {
         <select
           id="tag"
           name="tag"
-          value={displayTag}
+          // 🚀 ВИПРАВЛЕНО: Значення береться строго зі стору
+          value={draft.tag}
           onChange={e => setDraft({ tag: e.target.value as NoteCategory })}
           className={css.select}
         >
-          {}
           <option value="Todo">Todo</option>
           <option value="Work">Work</option>
           <option value="Personal">Personal</option>
@@ -95,7 +108,8 @@ export default function NoteForm() {
         <textarea
           id="content"
           name="content"
-          value={displayContent}
+          // 🚀 ВИПРАВЛЕНО: Значення береться строго зі стору
+          value={draft.content}
           onChange={e => setDraft({ content: e.target.value })}
           className={css.textarea}
           placeholder="Write your thoughts here..."
