@@ -1,35 +1,61 @@
-import { NextResponse } from 'next/server';
-import { api } from '../../api';
-import { cookies } from 'next/headers';
-import { isAxiosError } from 'axios';
-import { logErrorResponse } from '../../_utils/utils';
+import { NextResponse } from 'next/server'; // 🚀 ВИПРАВЛЕНО: Додано обов'язковий імпорт NextResponse
+import axios from 'axios';
+import { parse } from 'cookie';
 
 export async function POST() {
   try {
-    const cookieStore = await cookies();
+    // Робимо запит до оригінального бекенду GoIT Study для виходу з системи
+    const response = await axios.post(
+      'https://goit.study',
+      {},
+      {
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
 
-    const accessToken = cookieStore.get('accessToken')?.value;
-    const refreshToken = cookieStore.get('refreshToken')?.value;
+    // Перехоплюємо заголовки set-cookie, які прислав бекенд (там буде Max-Age=0)
+    const setCookieHeader = response.headers['set-cookie'];
+    const nextResponse = new NextResponse(null, { status: 200 });
 
-    await api.post('auth/logout', null, {
-      headers: {
-        Cookie: `accessToken=${accessToken}; refreshToken=${refreshToken}`,
-      },
-    });
+    if (setCookieHeader) {
+      setCookieHeader.forEach(cookieStr => {
+        const parsedCookie = parse(cookieStr);
 
-    cookieStore.delete('accessToken');
-    cookieStore.delete('refreshToken');
+        const cookieEntries = Object.entries(parsedCookie);
+        if (cookieEntries.length === 0) return;
 
-    return NextResponse.json({ message: 'Logged out successfully' }, { status: 200 });
-  } catch (error) {
-    if (isAxiosError(error)) {
-      logErrorResponse(error.response?.data);
+        const [cookieName, cookieValue] = cookieEntries;
+
+        const options = {
+          path: parsedCookie.Path || '/',
+          httpOnly: cookieStr.includes('HttpOnly'),
+          secure: cookieStr.includes('Secure'),
+          sameSite: (parsedCookie.SameSite?.toLowerCase() as 'lax' | 'strict' | 'none') || 'lax',
+          maxAge: 0, // Примусово зануляємо куку у браузері, як вимагає логаут
+        };
+
+        const finalName = cookieName as unknown as string;
+        const finalValue = cookieValue as unknown as string;
+
+        // Передаємо інструкцію видалення куки у браузер студента
+        nextResponse.cookies.set(finalName, finalValue, options);
+      });
+    }
+
+    return nextResponse;
+  } catch (error: unknown) {
+    // Безпечна обробка помилок за допомогою NextResponse без any
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data as { message?: string } | undefined;
       return NextResponse.json(
-        { error: error.message, response: error.response?.data },
-        { status: error.status }
+        { message: responseData?.message || 'Logout failed' },
+        { status: error.response?.status || 500 }
       );
     }
-    logErrorResponse({ message: (error as Error).message });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+
+    return NextResponse.json(
+      { message: 'An unexpected error occurred during logout.' },
+      { status: 500 }
+    );
   }
 }

@@ -1,57 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { parse } from 'cookie';
+import axios from 'axios'; // 🚀 ДОДАНО: Імпортуємо axios для безпечної перевірки помилки
 import { api } from '../../api';
-import { cookies } from 'next/headers';
-import { isAxiosError } from 'axios';
-import { logErrorResponse } from '../../_utils/utils';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
+    const body = await request.json();
 
-    // 1. Робимо запит до бекенду GoIT Study
+    // ОРИГІНАЛЬНИЙ ЗАПИТ GOIT: Запит через інстанс api
     const apiRes = await api.post('/auth/login', body);
 
-    const cookieStore = await cookies();
-    const data = apiRes.data;
+    const setCookieHeader = apiRes.headers['set-cookie'];
+    const nextResponse = NextResponse.json(apiRes.data, { status: apiRes.status });
 
-    // 2. 🚀 ВИПРАВЛЕНО: Дістаємо токени безпосередньо з JSON-відповіді GoIT API
-    // Сервер GoIT повертає об'єкт у форматі: { token: "...", user: { ... } } або з accessToken
-    const token = data.token || data.accessToken || data.user?.token;
-    const refreshToken = data.refreshToken || data.user?.refreshToken;
+    if (setCookieHeader) {
+      setCookieHeader.forEach(cookieStr => {
+        const parsedCookie = parse(cookieStr);
 
-    const res = NextResponse.json(data, { status: apiRes.status });
+        const cookieEntries = Object.entries(parsedCookie);
+        if (cookieEntries.length === 0) return;
 
-    // 3. 🚀 ВИПРАВЛЕНО: Самим записуємо токени у куки для Next.js
-    if (token) {
-      cookieStore.set('accessToken', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 30 * 24 * 60 * 60, // 30 днів
+        const [cookieName, cookieValue] = cookieEntries;
+
+        const options = {
+          path: parsedCookie.Path || '/',
+          httpOnly: cookieStr.includes('HttpOnly'),
+          secure: cookieStr.includes('Secure'),
+          sameSite: (parsedCookie.SameSite?.toLowerCase() as 'lax' | 'strict' | 'none') || 'lax',
+          maxAge: parsedCookie['Max-Age'] ? parseInt(parsedCookie['Max-Age'], 10) : undefined,
+        };
+
+        const finalName = cookieName as unknown as string;
+        const finalValue = cookieValue as unknown as string;
+
+        nextResponse.cookies.set(finalName, finalValue, options);
       });
     }
 
-    if (refreshToken) {
-      cookieStore.set('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 30 * 24 * 60 * 60,
-      });
-    }
-
-    return res;
-  } catch (error) {
-    if (isAxiosError(error)) {
-      logErrorResponse(error.response?.data);
+    return nextResponse;
+  } catch (error: unknown) {
+    // 🚀 ВИПРАВЛЕНО: Замість any безпечно типізуємо помилку через axios.isAxiosError
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data as { message?: string } | undefined;
       return NextResponse.json(
-        { error: error.message, response: error.response?.data },
-        { status: error.response?.status || 400 }
+        { message: responseData?.message || 'Login failed' },
+        { status: error.response?.status || 500 }
       );
     }
-    logErrorResponse({ message: (error as Error).message });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+
+    return NextResponse.json(
+      { message: 'An unexpected error occurred during login.' },
+      { status: 500 }
+    );
   }
 }

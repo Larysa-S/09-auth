@@ -1,71 +1,35 @@
+'use client';
+
 import React from 'react';
-import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { fetchNoteById } from '@/lib/api/serverApi';
-import NoteDetailsClient from './NoteDetails.client';
+import { useQuery } from '@tanstack/react-query';
+// Імпортуємо вашу реальну функцію та даємо їй локальний аліас, щоб не плутати
+import { fetchNoteById as fetchNoteClient } from '@/lib/api/clientApi';
+import css from './NoteDetails.module.css';
 
-interface NotePageProps {
-  params: Promise<{ id: string }>;
+interface NoteDetailsClientProps {
+  id: string;
 }
 
-export async function generateMetadata({ params }: NotePageProps): Promise<Metadata> {
-  const { id } = await params;
+export default function NoteDetailsClient({ id }: NoteDetailsClientProps) {
+  // Використовуємо useQuery з ідентичним до сервера ключем ['note', id]
+  const {
+    data: note,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['note', id],
+    queryFn: () => fetchNoteClient(id), // викликаємо імпортовану клієнтську функцію
+    staleTime: 60 * 1000,
+  });
 
-  try {
-    const note = await fetchNoteById(id);
-
-    // 🚀 ВИПРАВЛЕНО ДЛЯ TYPESCRIPT: якщо функція повернула null, переходимо в дефолтні метадані
-    if (!note) {
-      return {
-        title: 'Note Not Found',
-        description: 'The requested note could not be found or has been deleted.',
-      };
-    }
-
-    return {
-      title: note.title, // Автоматично підставиться в шаблон: "Назва нотатки | NoteHub"
-      description: note.content.substring(0, 160) || 'Read this note on NoteHub.',
-      openGraph: {
-        title: `${note.title} | NoteHub`,
-        description: note.content.substring(0, 160) || 'Detailed view of the note.',
-        url: `${process.env.NEXT_PUBLIC_API_URL}/notes/${id}`,
-        type: 'article',
-        images: [
-          {
-            url: 'https://ac.goit.global/fullstack/react/notehub-og-meta.jpg',
-          },
-        ],
-      },
-    };
-  } catch {
-    return {
-      title: 'Note Not Found',
-      description: 'The requested note could not be found or has been deleted.',
-    };
-  }
-}
-
-// 🚀 2. Серверний компонент (SSR), який завантажує дані перед рендером
-export default async function NotePage({ params }: NotePageProps) {
-  const { id } = await params;
-  let initialData = null;
-
-  try {
-    initialData = await fetchNoteById(id);
-
-    // 🚀 ВИПРАВЛЕНО ДЛЯ TYPESCRIPT ТА БЕЗПЕКИ: якщо нотатки немає на бекенді (null) —
-    // викликаємо вбудовану функцію notFound() для відображення 404 сторінки
-    if (!initialData) {
-      notFound();
-    }
-  } catch {
-    notFound();
-  }
+  if (isLoading) return <div>Loading note...</div>;
+  if (isError || !note) return <div>Error loading note.</div>;
 
   return (
-    <main>
-      {/* Передаємо завантажені на сервері дані (SSR) у клієнтський компонент (CSR) */}
-      <NoteDetailsClient initialData={initialData} id={id} />
-    </main>
+    <div className={css.container}>
+      <h1 className={css.title}>{note.title}</h1>
+      <p className={css.content}>{note.content}</p>
+      {note.tag && <span className={css.tag}>{note.tag}</span>}
+    </div>
   );
 }

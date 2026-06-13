@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { deleteNote } from '@/lib/api/clientApi';
 import type { Note } from '@/types/note';
@@ -35,10 +36,9 @@ export default function NoteList({ notes }: NoteListProps) {
           <div className={css.footer}>
             <span className={css.tag}>{tag}</span>
 
-            {}
-            <a href={`/notes/${id}`} className={css.link}>
+            <Link href={`/notes/${id}`} className={css.link}>
               View details
-            </a>
+            </Link>
 
             <button
               className={css.button}

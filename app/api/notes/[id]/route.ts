@@ -1,88 +1,59 @@
-import { NextResponse } from 'next/server';
-import axios from 'axios'; // 🚀 ВИПРАВЛЕНО
-import { cookies } from 'next/headers';
-import { logErrorResponse } from '../../_utils/utils';
-import { isAxiosError } from 'axios';
+import { NextResponse } from 'next/server'; // 🚀 ВИПРАВЛЕНО: Додано обов'язковий імпорт NextResponse
+import axios from 'axios';
+import { api } from '../../api';
 
-const GOIT_BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://goit.study';
+interface RouteParams {
+  params: Promise<{ id: string }> | { id: string };
+}
 
-type Props = {
-  params: Promise<{ id: string }>;
-};
-
-export async function GET(request: Request, { params }: Props) {
+// 🚀 1. GET /api/notes/:id — Отримання однієї нотатки за ID
+export async function GET(request: Request, props: RouteParams) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('accessToken')?.value || '';
-    const { id } = await params;
+    const resolvedParams = 'then' in props.params ? await props.params : props.params;
+    const { id } = resolvedParams;
 
-    // 🚀 ВИПРАВЛЕНО: Прямий запит на домен GoIT
-    const res = await axios.get(`${GOIT_BACKEND_URL}/notes/${id}`, {
+    // Еталонний запит GoIT з прокиданням cookies з браузера
+    const response = await api.get(`/notes/${id}`, {
       headers: {
-        Authorization: token ? `Bearer ${token}` : '',
+        Cookie: request.headers.get('cookie') || '',
       },
     });
-    return NextResponse.json(res.data, { status: res.status });
-  } catch (error) {
-    if (isAxiosError(error)) {
-      logErrorResponse(error.response?.data);
-      return NextResponse.json(error.response?.data || { message: error.message }, {
-        status: error.response?.status || 400,
-      });
+
+    return NextResponse.json(response.data, { status: response.status });
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data as { message?: string } | undefined;
+      return NextResponse.json(
+        { message: responseData?.message || 'Failed to fetch note' },
+        { status: error.response?.status || 500 }
+      );
     }
-    logErrorResponse({ message: (error as Error).message });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-export async function DELETE(request: Request, { params }: Props) {
+// 🚀 2. DELETE /api/notes/:id — Видалення нотатки за ID
+export async function DELETE(request: Request, props: RouteParams) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('accessToken')?.value || '';
-    const { id } = await params;
+    const resolvedParams = 'then' in props.params ? await props.params : props.params;
+    const { id } = resolvedParams;
 
-    // 🚀
-    const res = await axios.delete(`${GOIT_BACKEND_URL}/notes/${id}`, {
+    // Еталонний запит GoIT з прокиданням cookies з браузера
+    const response = await api.delete(`/notes/${id}`, {
       headers: {
-        Authorization: token ? `Bearer ${token}` : '',
+        Cookie: request.headers.get('cookie') || '',
       },
     });
-    return NextResponse.json(res.data, { status: res.status });
-  } catch (error) {
-    if (isAxiosError(error)) {
-      logErrorResponse(error.response?.data);
-      return NextResponse.json(error.response?.data || { message: error.message }, {
-        status: error.response?.status || 400,
-      });
-    }
-    logErrorResponse({ message: (error as Error).message });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
-}
 
-export async function PATCH(request: Request, { params }: Props) {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('accessToken')?.value || '';
-    const { id } = await params;
-    const body = await request.json();
-
-    // 🚀
-    const res = await axios.patch(`${GOIT_BACKEND_URL}/notes/${id}`, body, {
-      headers: {
-        Authorization: token ? `Bearer ${token}` : '',
-        'Content-Type': 'application/json',
-      },
-    });
-    return NextResponse.json(res.data, { status: res.status });
-  } catch (error) {
-    if (isAxiosError(error)) {
-      logErrorResponse(error.response?.data);
-      return NextResponse.json(error.response?.data || { message: error.message }, {
-        status: error.response?.status || 400,
-      });
+    return NextResponse.json(response.data, { status: response.status });
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data as { message?: string } | undefined;
+      return NextResponse.json(
+        { message: responseData?.message || 'Failed to delete note' },
+        { status: error.response?.status || 500 }
+      );
     }
-    logErrorResponse({ message: (error as Error).message });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -1,15 +1,19 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation'; // 🚀 ВИПРАВЛЕНО: Імпортуємо useRouter для клієнтської навігації
 
 interface AuthLayoutProps {
   children: React.ReactNode;
 }
 
-// 🚀 Назва компонента універсальна для всієї групи авторизації
 export default function AuthLayout({ children }: AuthLayoutProps) {
-  return (
-    <>
-      {/* Спільна обгортка для сторінок входу (sign-in) та реєстрації (sign-up) */}
-      {children}
-    </>
-  );
+  const router = useRouter();
+
+  // 🚀 ВИПРАВЛЕНО: Додано клієнтську логіку виклику router.refresh() при монтуванні
+  useEffect(() => {
+    router.refresh();
+  }, [router]);
+
+  return <>{children}</>;
 }

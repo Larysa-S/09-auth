@@ -1,7 +1,8 @@
 import React from 'react';
 import { Metadata } from 'next';
 import Image from 'next/image';
-import { getMe } from '@/lib/api/serverApi'; // Обов'язково з serverApi за ТЗ
+import Link from 'next/link'; // 🚀 ВИПРАВЛЕНО: Імпортуємо правильний компонент Link для навігації
+import { getMe } from '@/lib/api/serverApi';
 import css from './page.module.css';
 
 export const metadata: Metadata = {
@@ -15,30 +16,25 @@ export default async function ProfilePage() {
 
   const defaultAvatar = 'https://goit.global';
 
-  // Трюк для обходу валідації типів JSX, щоб згенерувати саме тег <a> з атрибутом src за вимогами ТЗ
-  const anchorProps = {
-    src: '/profile/edit',
-    className: css.editProfileButton,
-  } as React.AnchorHTMLAttributes<HTMLAnchorElement> & { src: string };
-
   return (
     <main className={css.mainContent}>
       <div className={css.profileCard}>
         <div className={css.header}>
           <h1 className={css.formTitle}>Profile Page</h1>
-          {/* Вимоги ТЗ виконано: тег <a> з атрибутом src */}
-          <a {...anchorProps}>Edit Profile</a>
+          {/* 🚀 ВИПРАВЛЕНО: Замінено тег <a> на <Link> з атрибутом href строго за конвенціями Next.js */}
+          <Link href="/profile/edit" className={css.editProfileButton}>
+            Edit Profile
+          </Link>
         </div>
 
         <div className={css.avatarWrapper}>
-          {/* Оптимізований компонент для віддалених зображень, що покращує LCP */}
           <Image
             src={user?.avatar || defaultAvatar}
             alt="User Avatar"
             width={120}
             height={120}
             className={css.avatar}
-            priority // Завантажується першочергово
+            priority // Завантажується першочергово для ідеального LCP
           />
         </div>
 

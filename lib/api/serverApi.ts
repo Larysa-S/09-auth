@@ -1,6 +1,7 @@
 import 'server-only'; // Гарантує, що цей код ніколи не потрапить у клієнтський бандл
 import { cookies } from 'next/headers';
-import { api } from './api'; // 🚀 ВИПРАВЛЕНО: Використовуємо спільний екземпляр з api.ts за вимогою ТЗ
+import axios, { AxiosResponse } from 'axios';
+import { api } from './api';
 import { User } from '@/types/user';
 import { Note } from '@/types/note';
 
@@ -9,12 +10,11 @@ interface FetchNotesResponse {
   totalPages: number;
 }
 
-// 🔒 Допоміжна функція для передачі кук з сервера на бекенд
+// 🔒 Допоміжна функція для передачі кук з сервера на бекенд (для SSR компонентів)
 const getServerHeaders = async () => {
   const cookieStore = await cookies();
   return {
     headers: {
-      // 🚀 ВИПРАВЛЕНО: Передаємо ВСІ куки як один рядок, як вимагає ТЗ, замість Bearer токена
       Cookie: cookieStore.toString(),
     },
   };
@@ -26,7 +26,6 @@ export const fetchNotes = async (
 ): Promise<FetchNotesResponse> => {
   try {
     const config = await getServerHeaders();
-    // Використовуємо відносний шлях, бо в api.ts вже налаштовано baseURL
     const response = await api.get<FetchNotesResponse>('/notes', {
       ...config,
       params,
@@ -62,15 +61,21 @@ export const getMe = async (): Promise<User | null> => {
   }
 };
 
-// 🚀 4. Перевірка сесії (Обов'язкова функція за ТЗ)
-export const checkSession = async (): Promise<User | null> => {
-  try {
-    const config = await getServerHeaders();
-    // 🚀 ВИПРАВЛЕНО: Використовуємо правильний ендпоінт /auth/session згідно з ТЗ
-    const response = await api.get<User>('/auth/session', config);
-    return response.data;
-  } catch (error) {
-    console.error('SSR checkSession error:', error);
-    return null;
+// 🚀 4. Перевірка та оновлення сесії (Виправлено за вимогами ментора)
+// Функція ПОВНІСТЮ та ЗАВЖДИ повертає повний об'єкт відповіді AxiosResponse
+export const checkSession = async (
+  explicitCookies?: string
+): Promise<AxiosResponse<User | null>> => {
+  if (explicitCookies) {
+    // Виклик з proxy.ts для Silent Refresh: робимо прямий запит до бекенду GoIT
+    return await axios.get<User | null>('https://goit.study', {
+      headers: {
+        Cookie: explicitCookies,
+      },
+    });
   }
+
+  // Звичайний виклик у додатку: повертаємо ПОВНИЙ об'єкт відповіді інстансу api (без .data)
+  const config = await getServerHeaders();
+  return await api.get<User | null>('/auth/session', config);
 };

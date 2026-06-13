@@ -1,75 +1,63 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import axios from 'axios';
-import { cookies } from 'next/headers';
-import { isAxiosError } from 'axios';
-import { logErrorResponse } from '../_utils/utils';
+// 🚀 ОРИГІНАЛЬНИЙ ІМПОРТ GOIT: Використовуємо внутрішній інстанс api замість чистого axios
+import { api } from '../api';
 
-// Прямий URL до бекенду GoIT для серверних запитів
-const GOIT_BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://goit.study';
-
-export async function GET(request: NextRequest) {
+// 🚀 1. GET /api/notes — Отримання списку нотаток з урахуванням query-параметрів
+export async function GET(request: Request) {
   try {
-    const cookieStore = await cookies();
+    const { searchParams } = new URL(request.url);
 
-    // Дістаємо токен із куки
-    const token = cookieStore.get('accessToken')?.value || '';
+    // Збираємо параметри фільтрації, які прийшли з фронтенду
+    const params = {
+      search: searchParams.get('search') || undefined,
+      page: searchParams.get('page') || undefined,
+      perPage: searchParams.get('perPage') || undefined,
+      tag: searchParams.get('tag') || undefined,
+    };
 
-    const search = request.nextUrl.searchParams.get('search') ?? '';
-    const page = Number(request.nextUrl.searchParams.get('page') ?? 1);
-    const rawTag = request.nextUrl.searchParams.get('tag') ?? '';
-    const tag = rawTag === 'All' ? '' : rawTag;
-
-    // 🚀 ВИПРАВЛЕНО: Запит йде НАПРЯМУ на GoIT домен, обходячи локальний baseURL
-    const res = await axios.get(`${GOIT_BACKEND_URL}/notes`, {
-      params: {
-        ...(search !== '' && { search }),
-        page,
-        perPage: 12,
-        ...(tag && { tag }),
-      },
+    // ОРИГІНАЛЬНИЙ ЗАПИТ GOIT: Передаємо куки сесії далі на бекенд за допомогою headers запиту
+    const response = await api.get('/notes', {
+      params,
       headers: {
-        Authorization: token ? `Bearer ${token}` : '',
+        Cookie: request.headers.get('cookie') || '',
       },
     });
 
-    return NextResponse.json(res.data, { status: res.status });
-  } catch (error) {
-    if (isAxiosError(error)) {
-      logErrorResponse(error.response?.data);
-      return NextResponse.json(error.response?.data || { message: error.message }, {
-        status: error.response?.status || 400,
-      });
+    return NextResponse.json(response.data, { status: response.status });
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data as { message?: string } | undefined;
+      return NextResponse.json(
+        { message: responseData?.message || 'Failed to fetch notes' },
+        { status: error.response?.status || 500 }
+      );
     }
-    logErrorResponse({ message: (error as Error).message });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+// 🚀 2. POST /api/notes — Створення нової нотатки
+export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-
-    // Дістаємо токен із куки
-    const token = cookieStore.get('accessToken')?.value || '';
     const body = await request.json();
 
-    // 🚀 ВИПРАВЛЕНО: Запит створення нотатки йде НАПРЯМУ на GoIT домен
-    const res = await axios.post(`${GOIT_BACKEND_URL}/notes`, body, {
+    // ОРИГІНАЛЬНИЙ ЗАПИТ GOIT: Створюємо нотатку через інстанс api з прокиданням кук
+    const response = await api.post('/notes', body, {
       headers: {
-        Authorization: token ? `Bearer ${token}` : '',
-        'Content-Type': 'application/json',
+        Cookie: request.headers.get('cookie') || '',
       },
     });
 
-    return NextResponse.json(res.data, { status: res.status });
-  } catch (error) {
-    if (isAxiosError(error)) {
-      logErrorResponse(error.response?.data);
-      return NextResponse.json(error.response?.data || { message: error.message }, {
-        status: error.response?.status || 400,
-      });
+    return NextResponse.json(response.data, { status: response.status });
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data as { message?: string } | undefined;
+      return NextResponse.json(
+        { message: responseData?.message || 'Failed to create note' },
+        { status: error.response?.status || 500 }
+      );
     }
-    logErrorResponse({ message: (error as Error).message });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
