@@ -1,18 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { api } from '../api';
+import axios from 'axios';
 import { cookies } from 'next/headers';
 import { isAxiosError } from 'axios';
 import { logErrorResponse } from '../_utils/utils';
 
+// Прямий URL до бекенду GoIT для серверних запитів
+const GOIT_BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://goit.study';
+
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
+
+    // Дістаємо токен із куки
+    const token = cookieStore.get('accessToken')?.value || '';
+
     const search = request.nextUrl.searchParams.get('search') ?? '';
     const page = Number(request.nextUrl.searchParams.get('page') ?? 1);
     const rawTag = request.nextUrl.searchParams.get('tag') ?? '';
     const tag = rawTag === 'All' ? '' : rawTag;
 
-    const res = await api('/notes', {
+    // 🚀 ВИПРАВЛЕНО: Запит йде НАПРЯМУ на GoIT домен, обходячи локальний baseURL
+    const res = await axios.get(`${GOIT_BACKEND_URL}/notes`, {
       params: {
         ...(search !== '' && { search }),
         page,
@@ -20,7 +28,7 @@ export async function GET(request: NextRequest) {
         ...(tag && { tag }),
       },
       headers: {
-        Cookie: cookieStore.toString(),
+        Authorization: token ? `Bearer ${token}` : '',
       },
     });
 
@@ -28,10 +36,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     if (isAxiosError(error)) {
       logErrorResponse(error.response?.data);
-      return NextResponse.json(
-        { error: error.message, response: error.response?.data },
-        { status: error.status }
-      );
+      return NextResponse.json(error.response?.data || { message: error.message }, {
+        status: error.response?.status || 400,
+      });
     }
     logErrorResponse({ message: (error as Error).message });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -42,11 +49,14 @@ export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies();
 
+    // Дістаємо токен із куки
+    const token = cookieStore.get('accessToken')?.value || '';
     const body = await request.json();
 
-    const res = await api.post('/notes', body, {
+    // 🚀 ВИПРАВЛЕНО: Запит створення нотатки йде НАПРЯМУ на GoIT домен
+    const res = await axios.post(`${GOIT_BACKEND_URL}/notes`, body, {
       headers: {
-        Cookie: cookieStore.toString(),
+        Authorization: token ? `Bearer ${token}` : '',
         'Content-Type': 'application/json',
       },
     });
@@ -55,10 +65,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (isAxiosError(error)) {
       logErrorResponse(error.response?.data);
-      return NextResponse.json(
-        { error: error.message, response: error.response?.data },
-        { status: error.status }
-      );
+      return NextResponse.json(error.response?.data || { message: error.message }, {
+        status: error.response?.status || 400,
+      });
     }
     logErrorResponse({ message: (error as Error).message });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

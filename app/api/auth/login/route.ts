@@ -1,41 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { api } from '../../api';
 import { cookies } from 'next/headers';
-import { parse } from 'cookie';
 import { isAxiosError } from 'axios';
 import { logErrorResponse } from '../../_utils/utils';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const apiRes = await api.post('auth/login', body);
+
+    // 1. Робимо запит до бекенду GoIT Study
+    const apiRes = await api.post('/auth/login', body);
 
     const cookieStore = await cookies();
-    const setCookie = apiRes.headers['set-cookie'];
+    const data = apiRes.data;
 
-    if (setCookie) {
-      const cookieArray = Array.isArray(setCookie) ? setCookie : [setCookie];
-      for (const cookieStr of cookieArray) {
-        const parsed = parse(cookieStr);
-        const options = {
-          expires: parsed.Expires ? new Date(parsed.Expires) : undefined,
-          path: parsed.Path,
-          maxAge: Number(parsed['Max-Age']),
-        };
-        if (parsed.accessToken) cookieStore.set('accessToken', parsed.accessToken, options);
-        if (parsed.refreshToken) cookieStore.set('refreshToken', parsed.refreshToken, options);
-      }
+    // 2. 🚀 ВИПРАВЛЕНО: Дістаємо токени безпосередньо з JSON-відповіді GoIT API
+    // Сервер GoIT повертає об'єкт у форматі: { token: "...", user: { ... } } або з accessToken
+    const token = data.token || data.accessToken || data.user?.token;
+    const refreshToken = data.refreshToken || data.user?.refreshToken;
 
-      return NextResponse.json(apiRes.data, { status: apiRes.status });
+    const res = NextResponse.json(data, { status: apiRes.status });
+
+    // 3. 🚀 ВИПРАВЛЕНО: Самим записуємо токени у куки для Next.js
+    if (token) {
+      cookieStore.set('accessToken', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60, // 30 днів
+      });
     }
 
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (refreshToken) {
+      cookieStore.set('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60,
+      });
+    }
+
+    return res;
   } catch (error) {
     if (isAxiosError(error)) {
       logErrorResponse(error.response?.data);
       return NextResponse.json(
         { error: error.message, response: error.response?.data },
-        { status: error.status }
+        { status: error.response?.status || 400 }
       );
     }
     logErrorResponse({ message: (error as Error).message });

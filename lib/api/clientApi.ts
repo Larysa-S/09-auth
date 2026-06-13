@@ -36,8 +36,14 @@ export const logout = async (): Promise<void> => {
 };
 
 export const checkSession = async (): Promise<User | null> => {
-  const response = await api.get<User | null>('/users/me');
-  return response.data;
+  try {
+    const response = await api.get<User | null>('/users/me');
+    return response.data;
+  } catch {
+    // 🚀 ВИПРАВЛЕНО: Якщо гість не авторизований (401), безпечно повертаємо null.
+    // Це захистить додаток від падіння та нескінченного екрану завантаження.
+    return null;
+  }
 };
 
 export const fetchNotes = async (

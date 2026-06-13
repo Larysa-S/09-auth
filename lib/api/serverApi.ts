@@ -4,7 +4,6 @@ import { cookies } from 'next/headers';
 import { User } from '@/types/user';
 import { Note } from '@/types/note';
 
-// 🚀 ВИПРАВЛЕНО: Встановлено точну дефолтну адресу вашого бекенду GoIT NoteHub
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://notehub-api.goit.study';
 
 interface FetchNotesResponse {
@@ -12,18 +11,29 @@ interface FetchNotesResponse {
   totalPages: number;
 }
 
-// 🔒 Збір кук
+// 🔒 Збір токена для серверних запитів (SSR) та Middleware (proxy.ts)
 const getAuthHeaders = async (explicitCookies?: string) => {
-  const cookieString =
-    explicitCookies !== undefined ? explicitCookies : (await cookies()).toString();
+  let token = '';
+
+  if (explicitCookies) {
+    // 🚀 ВИПРАВЛЕНО: Якщо куки передані з proxy.ts, витягуємо accessToken через RegExp
+    const match = explicitCookies.match(/accessToken=([^;]+)/);
+    if (match) token = match[1];
+  } else {
+    // 🚀 ВИПРАВЛЕНО: Якщо це звичайний серверний компонент, беремо accessToken через next/headers
+    const cookieStore = await cookies();
+    token = cookieStore.get('accessToken')?.value || '';
+  }
+
   return {
     headers: {
-      Cookie: cookieString,
+      // 🚀 ВИПРАВЛЕНО: Формуємо єдино правильний для GoIT Bearer заголовок замість кук
+      Authorization: token ? `Bearer ${token}` : '',
     },
   };
 };
 
-// 🚀 1. Отримання всіх нотаток на сервері
+// 🚀 1. Отримання всіх нотаток на сервері (Використовується для SSR префетчингу)
 export const fetchNotes = async (
   params?: Record<string, string | number>
 ): Promise<FetchNotesResponse> => {
@@ -67,8 +77,8 @@ export const getMe = async (): Promise<User | null> => {
 export const checkSession = async (explicitCookies?: string): Promise<User | null> => {
   try {
     const headers = await getAuthHeaders(explicitCookies);
-    // 🚀 ВИПРАВЛЕНО: Змінено на валідний GET-запит ендпоінту /auth/current за специфікацією GoIT
-    const response = await axios.get<User | null>(`${baseURL}/auth/current`, headers);
+    // 🚀 ВИПРАВЛЕНО: Стукаємо на валідний ендпоінт /users/me замість неіснуючого /auth/current
+    const response = await axios.get<User | null>(`${baseURL}/users/me`, headers);
     return response.data;
   } catch {
     return null;

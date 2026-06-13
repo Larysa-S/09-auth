@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { checkSession, getMe } from '@/lib/api/clientApi';
+import React, { useEffect } from 'react';
+import { checkSession } from '@/lib/api/clientApi';
 import useAuthStore from '@/lib/store/authStore';
-import axios from 'axios';
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -13,43 +12,26 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const setUser = useAuthStore(state => state.setUser);
   const clearIsAuthenticated = useAuthStore(state => state.clearIsAuthenticated);
 
-  // Локальний стан завантаження, щоб додаток не миготів, поки йде перевірка
-  const [isRefreshing, setIsRefreshing] = useState(true);
-
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // 1. Перевіряємо, чи є активна сесія в куках
-        const session = await checkSession();
+        // 🚀 Робимо один прямий запит до /users/me через checkSession
+        const userData = await checkSession();
 
-        // Якщо сесія є, робимо запит на отримання повних даних профілю
-        if (session) {
-          const userData = await getMe();
-          setUser(userData); // Записуємо користувача в Zustand стор
+        if (userData) {
+          setUser(userData); // Якщо користувач є — записуємо його в Zustand
         } else {
-          clearIsAuthenticated(); // Якщо сесія порожня — очищаємо стор
+          clearIsAuthenticated(); // Якщо повернувся null (гість) — скидаємо стан
         }
-      } catch (err: unknown) {
-        console.error('Session verification failed:', err);
-        clearIsAuthenticated(); // У разі помилки безпечно розлогінюємо
-      } finally {
-        setIsRefreshing(false); // Завершуємо процес перевірки
+      } catch {
+        clearIsAuthenticated(); // Безпечно розлогінюємо у разі збою мережі
       }
     };
 
     initAuth();
   }, [setUser, clearIsAuthenticated]);
 
-  // Поки йде перевірка кук, можна показати простий Loader, щоб закриті сторінки не миготіли
-  if (isRefreshing) {
-    return (
-      <div
-        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
-      >
-        <p>Loading session...</p>
-      </div>
-    );
-  }
-
+  // 🚀 Рендеримо контент додатка відразу. Навігація миттєво покаже
+  // кнопки Login/Sign up без затримок, крашів розширення та каскадних рендерів!
   return <>{children}</>;
 }
