@@ -1,6 +1,8 @@
 import 'server-only'; // Гарантує, що цей код ніколи не потрапить у клієнтський бандл
 import { cookies } from 'next/headers';
-import axios, { AxiosResponse } from 'axios';
+// 🚀 ВИПРАВЛЕНО: Імпортуємо AxiosResponse безпосередньо з типу або через інстанс,
+// щоб у файлі взагалі не було імпорту чистого клієнта 'axios'
+import type { AxiosResponse } from 'axios';
 import { api } from './api';
 import { User } from '@/types/user';
 import { Note } from '@/types/note';
@@ -61,14 +63,14 @@ export const getMe = async (): Promise<User | null> => {
   }
 };
 
-// 🚀 4. Перевірка та оновлення сесії (Виправлено за вимогами ментора)
-// Функція ПОВНІСТЮ та ЗАВЖДИ повертає повний об'єкт відповіді AxiosResponse
+// 🚀 4. Перевірка та оновлення сесії
+// 🔮 ВИПРАВЛЕНО: Повний та остаточний перехід на наш єдиний інстанс api
 export const checkSession = async (
   explicitCookies?: string
 ): Promise<AxiosResponse<User | null>> => {
   if (explicitCookies) {
-    // Виклик з proxy.ts для Silent Refresh: робимо прямий запит до бекенду GoIT
-    return await axios.get<User | null>('https://goit.study', {
+    // 🚀 ПРАВИЛЬНО: Використовуємо виключно наш екземпляр api, ніякого прямого axios!
+    return await api.get<User | null>('/auth/session', {
       headers: {
         Cookie: explicitCookies,
       },
