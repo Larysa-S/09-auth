@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { cookies } from 'next/headers'; // 🚀 1. ВИПРАВЛЕНО: Додано обов'язковий асинхронний імпорт за вимогою ментора
 import { checkSession } from '@/lib/api/serverApi';
 import { parse } from 'cookie';
 
@@ -16,14 +17,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 1. Перевіряємо саме куки accessToken та refreshToken за вимогами ментора
-  const accessToken = request.cookies.get('accessToken')?.value;
-  const refreshToken = request.cookies.get('refreshToken')?.value;
+  // 🚀 2. ВИПРАВЛЕНО: Використовуємо асинхронну функцію cookies() з next/headers за вимогою ментора
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get('accessToken')?.value;
+  const refreshToken = cookieStore.get('refreshToken')?.value;
 
   let isAuthenticated = !!accessToken;
   let newCookiesHeader: string[] | null = null;
 
-  // 2. Логіка оновлення сесії (Silent Refresh) за допомогою refreshToken
+  // Логіка оновлення сесії (Silent Refresh) за допомогою refreshToken
   if (!accessToken && refreshToken) {
     try {
       const cookieString = `refreshToken=${refreshToken}`;
@@ -47,7 +49,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 3. Редірект авторизованих користувачів на головну сторінку (/), а не на /profile
+  // Редірект авторизованих користувачів на головну сторінку (/)
   if (isPublicRoute && isAuthenticated) {
     const homeUrl = new URL('/', request.url);
     return NextResponse.redirect(homeUrl);
@@ -64,8 +66,6 @@ export async function proxy(request: NextRequest) {
 
       const [cookieName, cookieValue] = cookieEntries;
 
-      // 🚀 ВИПРАВЛЕНО: Використовуємо безпечне подвійне приведення типів
-      // Це повністю прибирає помилку "conversion of type may be mistake"
       const finalName = cookieName as unknown as string;
       const finalValue = cookieValue as unknown as string;
 

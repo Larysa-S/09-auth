@@ -1,63 +1,66 @@
-import { NextResponse } from 'next/server';
-import axios from 'axios';
-// 🚀 ОРИГІНАЛЬНИЙ ІМПОРТ GOIT: Використовуємо внутрішній інстанс api замість чистого axios
+import { NextRequest, NextResponse } from 'next/server';
 import { api } from '../api';
+import { cookies } from 'next/headers';
+import { isAxiosError } from 'axios';
+import { logErrorResponse } from '../_utils/utils';
 
-// 🚀 1. GET /api/notes — Отримання списку нотаток з урахуванням query-параметрів
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const cookieStore = await cookies();
+    const search = request.nextUrl.searchParams.get('search') ?? '';
+    const page = Number(request.nextUrl.searchParams.get('page') ?? 1);
+    const rawTag = request.nextUrl.searchParams.get('tag') ?? '';
+    const tag = rawTag === 'All' ? '' : rawTag;
 
-    // Збираємо параметри фільтрації, які прийшли з фронтенду
-    const params = {
-      search: searchParams.get('search') || undefined,
-      page: searchParams.get('page') || undefined,
-      perPage: searchParams.get('perPage') || undefined,
-      tag: searchParams.get('tag') || undefined,
-    };
-
-    // ОРИГІНАЛЬНИЙ ЗАПИТ GOIT: Передаємо куки сесії далі на бекенд за допомогою headers запиту
-    const response = await api.get('/notes', {
-      params,
+    const res = await api('/notes', {
+      params: {
+        ...(search !== '' && { search }),
+        page,
+        perPage: 12,
+        ...(tag && { tag }),
+      },
       headers: {
-        Cookie: request.headers.get('cookie') || '',
+        Cookie: cookieStore.toString(),
       },
     });
 
-    return NextResponse.json(response.data, { status: response.status });
-  } catch (error: unknown) {
-    if (axios.isAxiosError(error)) {
-      const responseData = error.response?.data as { message?: string } | undefined;
+    return NextResponse.json(res.data, { status: res.status });
+  } catch (error) {
+    if (isAxiosError(error)) {
+      logErrorResponse(error.response?.data);
       return NextResponse.json(
-        { message: responseData?.message || 'Failed to fetch notes' },
-        { status: error.response?.status || 500 }
+        { error: error.message, response: error.response?.data },
+        { status: error.status }
       );
     }
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    logErrorResponse({ message: (error as Error).message });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-// 🚀 2. POST /api/notes — Створення нової нотатки
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const cookieStore = await cookies();
+
     const body = await request.json();
 
-    // ОРИГІНАЛЬНИЙ ЗАПИТ GOIT: Створюємо нотатку через інстанс api з прокиданням кук
-    const response = await api.post('/notes', body, {
+    const res = await api.post('/notes', body, {
       headers: {
-        Cookie: request.headers.get('cookie') || '',
+        Cookie: cookieStore.toString(),
+        'Content-Type': 'application/json',
       },
     });
 
-    return NextResponse.json(response.data, { status: response.status });
-  } catch (error: unknown) {
-    if (axios.isAxiosError(error)) {
-      const responseData = error.response?.data as { message?: string } | undefined;
+    return NextResponse.json(res.data, { status: res.status });
+  } catch (error) {
+    if (isAxiosError(error)) {
+      logErrorResponse(error.response?.data);
       return NextResponse.json(
-        { message: responseData?.message || 'Failed to create note' },
-        { status: error.response?.status || 500 }
+        { error: error.message, response: error.response?.data },
+        { status: error.status }
       );
     }
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    logErrorResponse({ message: (error as Error).message });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
