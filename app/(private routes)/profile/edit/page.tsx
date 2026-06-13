@@ -6,19 +6,16 @@ import Image from 'next/image';
 import axios from 'axios';
 import useAuthStore from '@/lib/store/authStore';
 import { updateMe } from '@/lib/api/clientApi';
-import css from '@/components/ProfilePage/ProfilePage.module.css';
+import css from './page.module.css';
 
 export default function EditProfilePage() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
 
-  // 💡 ВИПРАВЛЕНО: Ініціалізуємо стейт відразу поточним ім'ям, якщо воно є.
-  // Це повністю прибирає потребу в useEffect і вирішує проблему синхронних cascading updates.
   const [username, setUsername] = useState(user?.username || '');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Якщо користувача ще немає у стейті (наприклад, під час ініціалізації)
   if (!user) {
     return (
       <main className={css.mainContent}>

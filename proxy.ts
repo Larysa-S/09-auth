@@ -1,10 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { checkSession } from '@/lib/api/serverApi';
 
 const privateRoutes = ['/profile', '/notes'];
 const publicRoutes = ['/sign-in', '/sign-up'];
 
-// 🚀 ВИПРАВЛЕНО: Назва функції proxy строго за конвенцією Next.js 16!
+// Назва функції proxy строго за конвенцією Next.js 16!
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -15,21 +14,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  let isAuthenticated = false;
+  // 2. Оптимальна перевірка куки сесії без зайвих HTTP-запитів на бекенд.
+  // Перевіряємо наявність куки 'session' або 'token' прямо з браузера.
+  const isAuthenticated = request.cookies.has('session') || request.cookies.has('token');
 
-  try {
-    const cookieString = request.headers.get('cookie') || '';
-    const session = await checkSession(cookieString);
-    isAuthenticated = !!session;
-  } catch {
-    isAuthenticated = false;
-  }
-
+  // Якщо маршрут приватний і користувач НЕ авторизований — редірект на вхід
   if (isPrivateRoute && !isAuthenticated) {
     const loginUrl = new URL('/sign-in', request.url);
     return NextResponse.redirect(loginUrl);
   }
 
+  // Якщо користувач ВЖЕ авторизований, але намагається відкрити сторінку логіну/реєстрації — редірект на профіль
   if (isPublicRoute && isAuthenticated) {
     const profileUrl = new URL('/profile', request.url);
     return NextResponse.redirect(profileUrl);
@@ -39,5 +34,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // Конфігурація matcher визначає маршрути, де запускається проксі
   matcher: ['/profile/:path*', '/notes/:path*', '/sign-in', '/sign-up'],
 };

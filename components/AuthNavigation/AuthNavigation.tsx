@@ -10,9 +10,8 @@ import css from './AuthNavigation.module.css';
 export default function AuthNavigation() {
   const router = useRouter();
 
-  // Беремо реальний стан та метод очищення зі створеного Zustand-стору
+  // Деструктуризація дефолтного стору працює без помилок implicit any
   const { isAuthenticated, user, clearIsAuthenticated } = useAuthStore();
-
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -25,16 +24,17 @@ export default function AuthNavigation() {
   const handleLogout = async () => {
     try {
       await logout();
-    } catch (err: unknown) {
-      console.error('Logout request failed:', err);
-    } finally {
+      // 🚀 ВИПРАВЛЕНО: Очищаємо стан та робимо редірект ТІЛЬКИ у разі успішного видалення сесії на бекенді
       clearIsAuthenticated();
       router.push('/sign-in');
+    } catch (err: unknown) {
+      console.error('Logout request failed:', err);
+      // Якщо сталася помилка, можна додати сповіщення для користувача,
+      // але головне — ми не ламаємо його поточну сесію локально.
     }
   };
 
-  // 🚀 ВИПРАВЛЕНО: Замість return null рендеримо дефолтні посилання для гостя.
-  // Це рятує геометрію і флекс-сітку хедера від руйнування при першому рендері!
+  // Посилання для гостя за замовчуванням під час гідрації
   if (!isClient) {
     return (
       <>
@@ -64,7 +64,8 @@ export default function AuthNavigation() {
 
           <li className={css.navigationItem}>
             <p className={css.userEmail}>{user?.email || 'User email'}</p>
-            <button className={css.logoutButton} onClick={handleLogout}>
+            {/* 🚀 ВИПРАВЛЕНО: Додано обов'язковий атрибут type="button" */}
+            <button type="button" className={css.logoutButton} onClick={handleLogout}>
               Logout
             </button>
           </li>

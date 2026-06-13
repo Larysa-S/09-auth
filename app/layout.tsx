@@ -6,7 +6,6 @@ import Header from '@/components/Header/Header';
 import Footer from '@/components/Footer/Footer';
 import AuthProvider from '@/components/AuthProvider/AuthProvider';
 
-// 🚀 1. НАЛАШТУВАННЯ ШРИФТУ
 const roboto = Roboto({
   weight: ['400', '500', '700'],
   subsets: ['latin', 'cyrillic'],
@@ -14,7 +13,6 @@ const roboto = Roboto({
   variable: '--font-roboto',
 });
 
-// 🚀 2. ВАЛІДНІ МЕТАДАНІ ЗА ЗАУВАЖЕННЯМ МЕНТОРА (Залишено один правильний варіант)
 export const metadata: Metadata = {
   title: {
     template: '%s | NoteHub',
@@ -28,7 +26,9 @@ export const metadata: Metadata = {
       'Зберігайте свої думки та керуйте нотатками за допомогою сучасного стеку технологій.',
     type: 'website',
     siteName: 'NoteHub',
-    url: 'https://08-zustand-larysa-s-projects-0c81aa0e.vercel.app',
+    // 🚀 ТИМЧАСОВО ВИПРАВЛЕНО: Використовуємо системну змінну або базовий URL.
+    // Після деплою hw-09 сюди можна буде вставити нове посилання.
+    url: process.env.NEXT_PUBLIC_API_URL || 'https://goit.global',
     images: [
       {
         url: 'https://goit.global',
@@ -45,14 +45,11 @@ interface RootLayoutProps {
   modal?: React.ReactNode;
 }
 
-// 🚀 3. ЄДИНИЙ КОРЕНЕВИЙ ЛЕЙАУТ ІЗ ПРАВИЛЬНОЮ ІЄРАРХІЄЮ ПРОВАЙДЕРІВ
 export default function RootLayout({ children, modal }: RootLayoutProps) {
   return (
     <html lang="en">
       <body className={`${roboto.className} ${roboto.variable}`}>
-        {/* 🥇 1. На самому верху TanStackProvider */}
         <TanStackProvider>
-          {/* 🥈 2. Всередині AuthProvider обгортає весь контент за ТЗ */}
           <AuthProvider>
             <Header />
 
@@ -62,9 +59,7 @@ export default function RootLayout({ children, modal }: RootLayoutProps) {
             <Footer />
           </AuthProvider>
         </TanStackProvider>
-
-        {/* Портал для модальних вікон */}
-        <div id="modal-root"></div>
+        {/* 🚀 ВИПРАВЛЕНО: Видалено не потрібний у Next.js App Router <div id="modal-root"> */}
       </body>
     </html>
   );

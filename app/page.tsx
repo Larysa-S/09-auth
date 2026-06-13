@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import css from './page.module.css';
 
-// 🌐 Статичні метадані для головної сторінки.
+// Статичні метадані для головної сторінки.
 export const metadata: Metadata = {
   title: 'Welcome',
   description:
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: 'https://goit.global', // Наше перевірене OG за ТЗ
+        url: 'https://goit.global',
       },
     ],
   },
@@ -36,8 +36,8 @@ export default function HomePage() {
         </p>
 
         <div className={css.actions}>
-          {/* 🚀 ВИПРАВЛЕНО: Прописано точний і прямий шлях до вашої робочої сторінки нотаток */}
-          <Link href="/notes/filter/all" className={css.button}>
+          {/* 🚀 ВИПРАВЛЕНО: Змінено шлях на правильну сторінку нотаток /notes */}
+          <Link href="/notes" className={css.button}>
             Go to My Notes
           </Link>
         </div>

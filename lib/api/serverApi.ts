@@ -1,46 +1,34 @@
 import 'server-only'; // Гарантує, що цей код ніколи не потрапить у клієнтський бандл
-import axios from 'axios';
 import { cookies } from 'next/headers';
+import { api } from './api'; // 🚀 ВИПРАВЛЕНО: Використовуємо спільний екземпляр з api.ts за вимогою ТЗ
 import { User } from '@/types/user';
 import { Note } from '@/types/note';
-
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://notehub-api.goit.study';
 
 interface FetchNotesResponse {
   notes: Note[];
   totalPages: number;
 }
 
-// 🔒 Збір токена для серверних запитів (SSR) та Middleware (proxy.ts)
-const getAuthHeaders = async (explicitCookies?: string) => {
-  let token = '';
-
-  if (explicitCookies) {
-    // 🚀 ВИПРАВЛЕНО: Якщо куки передані з proxy.ts, витягуємо accessToken через RegExp
-    const match = explicitCookies.match(/accessToken=([^;]+)/);
-    if (match) token = match[1];
-  } else {
-    // 🚀 ВИПРАВЛЕНО: Якщо це звичайний серверний компонент, беремо accessToken через next/headers
-    const cookieStore = await cookies();
-    token = cookieStore.get('accessToken')?.value || '';
-  }
-
+// 🔒 Допоміжна функція для передачі кук з сервера на бекенд
+const getServerHeaders = async () => {
+  const cookieStore = await cookies();
   return {
     headers: {
-      // 🚀 ВИПРАВЛЕНО: Формуємо єдино правильний для GoIT Bearer заголовок замість кук
-      Authorization: token ? `Bearer ${token}` : '',
+      // 🚀 ВИПРАВЛЕНО: Передаємо ВСІ куки як один рядок, як вимагає ТЗ, замість Bearer токена
+      Cookie: cookieStore.toString(),
     },
   };
 };
 
-// 🚀 1. Отримання всіх нотаток на сервері (Використовується для SSR префетчингу)
+// 🚀 1. Отримання всіх нотаток на сервері (SSR)
 export const fetchNotes = async (
   params?: Record<string, string | number>
 ): Promise<FetchNotesResponse> => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await axios.get<FetchNotesResponse>(`${baseURL}/notes`, {
-      ...headers,
+    const config = await getServerHeaders();
+    // Використовуємо відносний шлях, бо в api.ts вже налаштовано baseURL
+    const response = await api.get<FetchNotesResponse>('/notes', {
+      ...config,
       params,
     });
     return response.data;
@@ -50,11 +38,11 @@ export const fetchNotes = async (
   }
 };
 
-// 🚀 2. Отримання однієї нотатки за ID на сервері
+// 🚀 2. Отримання однієї нотатки за ID на сервері (SSR)
 export const fetchNoteById = async (id: string): Promise<Note | null> => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await axios.get<Note>(`${baseURL}/notes/${id}`, headers);
+    const config = await getServerHeaders();
+    const response = await api.get<Note>(`/notes/${id}`, config);
     return response.data;
   } catch (error) {
     console.error(`SSR fetchNoteById (${id}) error:`, error);
@@ -62,25 +50,27 @@ export const fetchNoteById = async (id: string): Promise<Note | null> => {
   }
 };
 
-// 🚀 3. Отримання даних профайлу поточного користувача
+// 🚀 3. Отримання даних профайлу поточного користувача (SSR)
 export const getMe = async (): Promise<User | null> => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await axios.get<User>(`${baseURL}/users/me`, headers);
+    const config = await getServerHeaders();
+    const response = await api.get<User>('/users/me', config);
     return response.data;
-  } catch {
+  } catch (error) {
+    console.error('SSR getMe error:', error);
     return null;
   }
 };
 
-// 🚀 4. Перевірка сесії для proxy.ts
-export const checkSession = async (explicitCookies?: string): Promise<User | null> => {
+// 🚀 4. Перевірка сесії (Обов'язкова функція за ТЗ)
+export const checkSession = async (): Promise<User | null> => {
   try {
-    const headers = await getAuthHeaders(explicitCookies);
-    // 🚀 ВИПРАВЛЕНО: Стукаємо на валідний ендпоінт /users/me замість неіснуючого /auth/current
-    const response = await axios.get<User | null>(`${baseURL}/users/me`, headers);
+    const config = await getServerHeaders();
+    // 🚀 ВИПРАВЛЕНО: Використовуємо правильний ендпоінт /auth/session згідно з ТЗ
+    const response = await api.get<User>('/auth/session', config);
     return response.data;
-  } catch {
+  } catch (error) {
+    console.error('SSR checkSession error:', error);
     return null;
   }
 };

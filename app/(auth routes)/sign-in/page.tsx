@@ -4,12 +4,16 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { login } from '@/lib/api/clientApi';
-import useAuthStore from '@/lib/store/authStore'; // 🌟 Імпортуємо стор
-import css from '@/components/SignInPage/SignInPage.module.css';
+import useAuthStore from '@/lib/store/authStore';
+// 🚀 ВИПРАВЛЕНО: Імпорт стилей має йти з поточної папки сторінки, як вимагає ТЗ
+import css from './SignInPage.module.css';
 
 export default function SignInPage() {
   const router = useRouter();
-  const setUser = useAuthStore(state => state.setUser); // 🌟 Беремо метод запису користувача
+
+  // 🚀 ВИПРАВЛЕНО: Витягуємо через деструктуризацію, щоб прибрати помилку 'implicit any'
+  const { setUser } = useAuthStore();
+
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -24,8 +28,7 @@ export default function SignInPage() {
 
     try {
       const userData = await login({ email, password });
-
-      setUser(userData); // 🌟 Зберігаємо користувача в Zustand після успішного входу
+      setUser(userData);
       router.push('/profile');
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {

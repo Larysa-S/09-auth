@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { checkSession } from '@/lib/api/clientApi';
 import useAuthStore from '@/lib/store/authStore';
 
@@ -9,29 +9,39 @@ interface AuthProviderProps {
 }
 
 export default function AuthProvider({ children }: AuthProviderProps) {
-  const setUser = useAuthStore(state => state.setUser);
-  const clearIsAuthenticated = useAuthStore(state => state.clearIsAuthenticated);
+  // Витягуємо методи через деструктуризацію для уникнення помилки implicit any
+  const { setUser, clearIsAuthenticated } = useAuthStore();
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // 🚀 Робимо один прямий запит до /users/me через checkSession
         const userData = await checkSession();
-
         if (userData) {
-          setUser(userData); // Якщо користувач є — записуємо його в Zustand
+          setUser(userData);
         } else {
-          clearIsAuthenticated(); // Якщо повернувся null (гість) — скидаємо стан
+          clearIsAuthenticated();
         }
       } catch {
-        clearIsAuthenticated(); // Безпечно розлогінюємо у разі збою мережі
+        clearIsAuthenticated();
+      } finally {
+        setIsInitializing(false);
       }
     };
 
     initAuth();
   }, [setUser, clearIsAuthenticated]);
 
-  // 🚀 Рендеримо контент додатка відразу. Навігація миттєво покаже
-  // кнопки Login/Sign up без затримок, крашів розширення та каскадних рендерів!
+  // Захист від блимання інтерфейсу під час перевірки сесії
+  if (isInitializing) {
+    return (
+      <div
+        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
+      >
+        <p>Loading session...</p>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }

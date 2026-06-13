@@ -4,12 +4,16 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { register } from '@/lib/api/clientApi';
-import useAuthStore from '@/lib/store/authStore'; // 🌟 Імпортуємо стор
-import css from '@/components/SignUpPage/SignUpPage.module.css';
+import useAuthStore from '@/lib/store/authStore';
+// 🚀 ВИПРАВЛЕНО: Імпортуємо стилі з поточної папки сторінки за умовою ДЗ
+import css from './SignUpPage.module.css';
 
 export default function SignUpPage() {
   const router = useRouter();
-  const setUser = useAuthStore(state => state.setUser); // 🌟 Беремо метод запису користувача
+
+  // 🚀 ВИПРАВЛЕНО: Витягуємо через деструктуризацію, щоб уникнути помилки типізації
+  const { setUser } = useAuthStore();
+
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -24,8 +28,7 @@ export default function SignUpPage() {
 
     try {
       const userData = await register({ email, password });
-
-      setUser(userData); // 🌟 Зберігаємо користувача в Zustand після успішної реєстрації
+      setUser(userData);
       router.push('/profile');
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {

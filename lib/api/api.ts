@@ -1,12 +1,14 @@
 import axios from 'axios';
 
-// 🚀 ВИПРАВЛЕНО ДЛЯ КЛІЄНТА: Клієнтські запити мають іти на локальний проксі-шар /api вашого Next.js
-// На локалці це перетвориться на http://localhost:3000/api
-const baseURL = '/api';
+// 🚀 ВИПРАВЛЕНО: Формуємо baseURL за чіткою інструкцією з ТЗ.
+// На сервері підставиться повний URL (наприклад, http://localhost:3000/api),
+// а на клієнті Next.js успішно відпрацює в обох варіантах.
+const baseURL = (process.env.NEXT_PUBLIC_API_URL || '') + '/api';
 
 export const api = axios.create({
   baseURL,
-  withCredentials: true, // Критично для передачі кук
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true, // Критично для передачі cookies
 });
-
-export default api;

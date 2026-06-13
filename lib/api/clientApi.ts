@@ -1,4 +1,4 @@
-import api from './api';
+import { api } from './api';
 import { User } from '@/types/user';
 import { Note, NoteCategory } from '@/types/note'; // Переконалися, що у вас types/note
 
@@ -37,11 +37,10 @@ export const logout = async (): Promise<void> => {
 
 export const checkSession = async (): Promise<User | null> => {
   try {
-    const response = await api.get<User | null>('/users/me');
+    // 🚀 ВИПРАВЛЕНО: Змінено на /auth/session за вимогами вашого ТЗ
+    const response = await api.get<User | null>('/auth/session');
     return response.data;
   } catch {
-    // 🚀 ВИПРАВЛЕНО: Якщо гість не авторизований (401), безпечно повертаємо null.
-    // Це захистить додаток від падіння та нескінченного екрану завантаження.
     return null;
   }
 };
