@@ -1,6 +1,14 @@
 import { api } from './api';
 import { User } from '@/types/user';
-import { Note, NoteCategory } from '@/types/note'; // Переконалися, що у вас types/note
+import { Note, NoteCategory } from '@/types/note';
+
+// 📝 Описуємо точні інтерфейси для аргументів запитів
+interface FetchNotesParams {
+  page?: number | string;
+  perPage?: number | string;
+  search?: string;
+  tag?: NoteCategory | string;
+}
 
 interface FetchNotesResponse {
   notes: Note[];
@@ -11,14 +19,21 @@ interface RegisterData {
   email: string;
   password: string;
 }
+
 interface LoginCredentials {
   email: string;
   password: string;
 }
+
 interface CreateNoteData {
   title: string;
   content: string;
   tag: NoteCategory;
+}
+
+// 🚀 Додатковий інтерфейс для суворого редагування профілю за порадою ментора
+interface UpdateMePayload {
+  username: string;
 }
 
 export const register = async (userData: RegisterData): Promise<User> => {
@@ -37,7 +52,6 @@ export const logout = async (): Promise<void> => {
 
 export const checkSession = async (): Promise<User | null> => {
   try {
-    // 🚀 ВИПРАВЛЕНО: Змінено на /auth/session за вимогами вашого ТЗ
     const response = await api.get<User | null>('/auth/session');
     return response.data;
   } catch {
@@ -45,9 +59,8 @@ export const checkSession = async (): Promise<User | null> => {
   }
 };
 
-export const fetchNotes = async (
-  params?: Record<string, string | number>
-): Promise<FetchNotesResponse> => {
+// 🔮 ПОКРАЩЕНО: Тепер параметри мають чіткі назви та типи замість Record
+export const fetchNotes = async (params?: FetchNotesParams): Promise<FetchNotesResponse> => {
   const response = await api.get<FetchNotesResponse>('/notes', { params });
   return response.data;
 };
@@ -72,7 +85,8 @@ export const getMe = async (): Promise<User> => {
   return response.data;
 };
 
-export const updateMe = async (userData: Partial<User>): Promise<User> => {
+// 🔥 ПОКРАЩЕНО (Рекомендація ментора): Обмежили тип лише полем username
+export const updateMe = async (userData: UpdateMePayload): Promise<User> => {
   const response = await api.patch<User>('/users/me', userData);
   return response.data;
 };
